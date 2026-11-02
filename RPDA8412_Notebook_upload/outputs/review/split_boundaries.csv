@@ -1,0 +1,3 @@
+boundary,date,"matches on date, earlier partition","matches on date, later partition"
+train / validation,2014-02-08,22,5
+validation / test,2015-04-11,10,11

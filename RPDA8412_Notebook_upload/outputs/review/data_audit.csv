@@ -1,0 +1,41 @@
+,value
+five-league matches before cleaning,14585
+duplicate id,0
+duplicate match_api_id,0
+duplicate date + home team + away team,0
+duplicate season + home team + away team,0
+home team equals away team,0
+"missing date, team or goals",0
+negative goals,0
+non-integer goals,0
+maximum goals by one team,10
+individual odds values at or below 1.00,0
+non-numeric odds values,0
+bookmaker triplets with only one or two of three prices,0
+matches with 0 complete bookmakers,8
+matches with 1 complete bookmaker,1
+matches with 2 complete bookmakers,1
+matches with 3 or 4 complete bookmakers,1
+matches with 5 or more complete bookmakers,14574
+minimum complete bookmakers among retained matches,3
+retained matches with mean overround at or below 0,0
+lowest and highest mean overround retained (%),3.46 to 14.13
+"line-up rows (team, match, player)",319606
+duplicate player within a team line-up,0
+previous-line-up rows before rating join,317817
+previous-line-up rows after rating join,317817
+rows added by rating join,0
+team-match rows in squad table,28986
+duplicate team-match rows in squad table,0
+matches after all feature joins,14575
+duplicate id after all feature joins,0
+Player_Attributes rows,183978
+Player_Attributes rows with missing overall rating (dropped),836
+kept rating rows with missing potential,0
+rating rows sharing a player and date with another row,1671
+players in previous line-ups without an eligible rating,0
+ratings outside 0 to 100,0
+home team-matches with no previous line-up or no rated player,80
+home team-matches with fewer than 11 rated players (excluding zero),483
+away team-matches with no previous line-up or no rated player,84
+away team-matches with fewer than 11 rated players (excluding zero),470

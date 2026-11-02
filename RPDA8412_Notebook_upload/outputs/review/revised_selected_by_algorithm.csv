@@ -1,0 +1,4 @@
+model,weights,calibration,best params,CV RPS,validation RPS,validation Log-Loss,test RPS,test Log-Loss,test accuracy
+Logistic Regression,none,uncalibrated,{'C': 0.01},0.20133029884878512,0.199275958989137,0.9821704887487608,0.2041236323659432,0.9993072686326733,0.5075445816186557
+Random Forest,none,uncalibrated,"{'max_depth': 6, 'max_features': 'sqrt', 'min_samples_split': 50, 'n_estimators': 300}",0.2010410031095075,0.1998044058628724,0.9817404233567569,0.203688509378216,0.9960716306400723,0.508459076360311
+XGBoost,none,uncalibrated,"{'colsample_bytree': 0.8, 'learning_rate': 0.03, 'max_depth': 3, 'n_estimators': 200, 'subsample': 0.8}",0.20178527816244313,0.19983136144667682,0.9839224815368652,0.2035629307082819,0.9964788556098938,0.5066300868770005

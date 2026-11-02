@@ -1,0 +1,4 @@
+model,best params,CV RPS,configurations,fits,mean seconds per fit,refit seconds
+Logistic Regression,{'clf__C': 0.01},0.21039446681621926,4,21,0.044457936286926264,0.05442214012145996
+Random Forest,"{'clf__max_depth': None, 'clf__max_features': 'sqrt', 'clf__min_samples_split': 20, 'clf__n_estimators': 300}",0.20889759220617238,12,61,1.056900417804718,2.1312355995178223
+XGBoost,"{'clf__colsample_bytree': 0.8, 'clf__learning_rate': 0.03, 'clf__max_depth': 3, 'clf__n_estimators': 200, 'clf__subsample': 0.8}",0.20926696994203997,8,41,2.133961170911789,1.4357988834381104

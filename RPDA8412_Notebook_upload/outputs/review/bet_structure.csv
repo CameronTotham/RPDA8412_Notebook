@@ -1,0 +1,7 @@
+settlement,threshold,bets,matches with a bet,matches with two bets,matches with three bets,home+draw pairs,home+away pairs,draw+away pairs,bets with model P x odds > 1,share,mean model P x odds
+average,3,1727,1558,169,0,83,1,85,1713,0.9918934568616097,1.2411571079716688
+average,5,1087,1023,64,0,33,1,30,1087,1.0,1.316129330438035
+average,7,661,637,24,0,13,0,11,661,1.0,1.3965956844455192
+best,3,1727,1558,169,0,83,1,85,1725,0.9988419224088014,1.3294209621520763
+best,5,1087,1023,64,0,33,1,30,1087,1.0,1.4111448878359514
+best,7,661,637,24,0,13,0,11,661,1.0,1.5000732394663543

@@ -1,0 +1,50 @@
+{
+  "seed": 42,
+  "matches": 14575,
+  "features": [
+    "elo_home",
+    "elo_away",
+    "elo_diff",
+    "home_gf_5",
+    "home_ga_5",
+    "home_pts_5",
+    "home_gf_10",
+    "home_ga_10",
+    "home_pts_10",
+    "away_gf_5",
+    "away_ga_5",
+    "away_pts_5",
+    "away_gf_10",
+    "away_ga_10",
+    "away_pts_10",
+    "home_squad_overall",
+    "away_squad_overall",
+    "home_squad_potential",
+    "away_squad_potential",
+    "squad_overall_diff",
+    "h2h_win_ratio",
+    "h2h_goal_diff",
+    "h2h_n"
+  ],
+  "selected_model": "XGBoost",
+  "selected_calibration": "isotonic",
+  "min_books": 3,
+  "elo": [
+    1500.0,
+    20.0
+  ],
+  "bookmakers": [
+    "B365",
+    "BS",
+    "BW",
+    "GB",
+    "IW",
+    "LB",
+    "PS",
+    "SJ",
+    "VC",
+    "WH"
+  ],
+  "permutations": 10000,
+  "bootstrap": 1000
+}

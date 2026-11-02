@@ -1,0 +1,9 @@
+,value
+matches,14575
+matches where a team's previous match is dated on or after the assumed collection date,69
+"of these, in the test set",16
+player rows,317817
+player rows whose rating is dated on or after the assumed collection date,14328
+matches affected by at least one such rating,2942
+test matches affected by at least one such rating,527
+distinct rating dates in Player_Attributes,197

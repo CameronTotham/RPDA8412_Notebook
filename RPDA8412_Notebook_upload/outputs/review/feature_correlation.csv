@@ -1,0 +1,5 @@
+,training-set correlation
+squad_overall_diff vs elo_diff,0.7962322971488033
+home_squad_overall vs elo_home,0.7298061386867168
+away_squad_overall vs elo_away,0.7299842858427285
+squad_overall_diff vs home_squad_overall,0.6721614149432963
