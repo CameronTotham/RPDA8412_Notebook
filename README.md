@@ -4,7 +4,6 @@ Analysis code and saved outputs for the RPDA8412 Research Report by Cameron Josh
 
 The project asks whether machine learning models trained on pre-match football data can beat the probabilities implied by bookmaker odds, and whether betting on any disagreement with the market would have made a profit. Bookmaker odds are never used as model inputs.
 
-
 ## Study design
 
 | Item | Detail |
@@ -41,7 +40,7 @@ Simulated betting on the selected model, at edge thresholds of 3, 5 and 7 percen
 | Best | 5 pp | 1,087 | -3.70% | -13.76% to +6.56% | 0.716 | 0.819 |
 | Best | 7 pp | 661 | +3.74% | -10.96% to +18.71% | 0.179 | 0.377 |
 
-The market had the lowest RPS, and no betting result was statistically significant. This does not prove the market is efficient: inefficiency was not demonstrated with these models, features and prices. The report sets out the full interpretation and limits.
+The market had the lowest RPS, and no betting result was statistically significant. On the bets it selected, the model overstated its chances by 7 to 10 percentage points, while the market's probabilities were within one point of the actual win rate. This does not prove the market is efficient: inefficiency was not demonstrated with these models, features and prices. The report sets out the full interpretation and limits.
 
 ## Repository contents
 
@@ -49,10 +48,11 @@ The working files are in the `RPDA8412_Notebook_upload` folder.
 
 | Path | What it is |
 |---|---|
-| `RPDA8412_Market_Efficiency.ipynb` | The executed notebook. Sections 1 to 11 are the original analysis. Section 12 holds the post-review checks. |
+| `RPDA8412_Market_Efficiency.ipynb` | The executed notebook. Sections 1 to 11 are the original analysis. Section 12 holds the post-review checks and Section 13 the second-review checks. |
 | `build_notebook.py` | Generates the notebook's cells. |
 | `outputs/` | Tables (CSV) and figures (PNG) from the original analysis, plus the run record. |
 | `outputs/review/` | Tables from the post-review checks. |
+| `outputs/review2/` | Tables from the second-review checks. |
 | `requirements.txt` | Versions used for the reported run. |
 
 The notebook in the top level of the repository is an identical copy of the one in the folder.
@@ -61,7 +61,7 @@ The notebook in the top level of the repository is an identical copy of the one 
 
 The data file is not included. Download `database.sqlite` from the [European Soccer Database on Kaggle](https://www.kaggle.com/datasets/hugomathien/soccer).
 
-Place it at `RPDA8412_Notebook_upload/data/database.sqlite`, or set the `SOCCER_DATA_DIR` environment variable to its folder. When no local file is found, the notebook tries to download it with `kagglehub`, which is available in Google Colab. The Kaggle page does not provide a fixed version number for the copy used here.
+Place it at `RPDA8412_Notebook_upload/data/database.sqlite`, or set the `SOCCER_DATA_DIR` environment variable to its folder. When no local file is found, the notebook tries to download it with `kagglehub`, which is available in Google Colab. The Kaggle page does not provide a fixed version number, so the file used is identified by its size (313,090,048 bytes) and SHA-256 hash (`4df8569777d59fdd690754b1cc8ca1f7989baf65f2eaddd0f1368285f11139a9`). The precise numbers can be reproduced only with that same file. With a different copy, the code and saved outputs remain available but the numbers may differ.
 
 The database contains names and attributes of professional players. It is not redistributed here, and no individual player is named in the outputs.
 
@@ -73,10 +73,13 @@ pip install -r requirements.txt
 jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=-1 RPDA8412_Market_Efficiency.ipynb
 ```
 
-The run used Python 3.13.5 with the random seed fixed at 42. Re-running reproduced the reported scores, and only run times differed. The original stages take a few minutes on a 16-core laptop, and Section 12 takes about 17 minutes more.
+The run used Python 3.13.5 with the random seed fixed at 42. Re-running reproduced the reported scores, and only run times differed. Run the notebook from top to bottom. The original stages take a few minutes on a 16-core laptop, Section 12 takes about 18 minutes more and Section 13 about 4 minutes.
 
+## Note on the post-review checks
 
-## The simulation is a research test only. No real wagers were placed, and it is not betting advice.
+Sections 12 and 13 were added after supervisor feedback, when the test results had already been seen. Their results are sensitivity analyses and revisions, not confirmatory tests.
+
+The simulation is a research test only. No real wagers were placed, and it is not betting advice.
 
 ## Reference
 
