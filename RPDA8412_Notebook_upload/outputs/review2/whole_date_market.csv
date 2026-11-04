@@ -1,0 +1,7 @@
+,value
+selected,XGBoost (isotonic)
+model minus market RPS,0.004434501560212272
+low,0.0024598007090112185
+high,0.006411176211917708
+resamples favouring model,0
+mean P(home) minus market,0.017281541930490252

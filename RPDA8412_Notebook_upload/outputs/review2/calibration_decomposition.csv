@@ -1,0 +1,5 @@
+model,set,"single uncalibrated pipeline, all training matches","average of the five fold pipelines, uncalibrated","average of the five fold pipelines, calibrated"
+Random Forest,validation,0.20529499438356405,0.20621666523750806,0.201623237978819
+Random Forest,test,0.20836139318578425,0.20917896864880137,0.20484507018284331
+XGBoost,validation,0.204885675944169,0.20529890584562305,0.19999876291617208
+XGBoost,test,0.2080445965778898,0.20827390037888854,0.20339870026498152

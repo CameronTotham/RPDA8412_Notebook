@@ -1,0 +1,14 @@
+,value
+rating rows after dropping missing overall,183142.0
+player-date pairs with more than one row,0.0
+rows in those pairs,0.0
+pairs whose overall ratings differ,0.0
+pairs whose potential ratings differ,0.0
+largest overall difference within a pair,
+largest potential difference within a pair,
+line-up player rows that use a tied rating,0.0
+matches with a changed squad feature,0.0
+test matches with a changed squad feature,0.0
+largest change in a squad feature,0.0
+"selected configuration test RPS, original",0.20339870026498152
+"selected configuration test RPS, tied rows averaged",0.20339870026498152

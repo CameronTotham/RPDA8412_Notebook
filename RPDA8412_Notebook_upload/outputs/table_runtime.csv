@@ -1,12 +1,12 @@
 ,seconds
-1. load data,3.4050489999353886
-2. odds and benchmark,0.46042310004122555
-3. feature engineering,0.9886474999366328
-4. split and scoring,0.06655830005183816
-5. hyperparameter tuning,160.48148700001184
-6. calibration and selection,27.65623169997707
-7. test evaluation and bootstrap,10.865855399984866
-8. permutation importance,15.655201900051907
-9. betting simulation and permutation tests,8.401514300028794
-10. reproducibility record,0.014237399911507964
-Total,227.99520559993107
+1. load data,2.6531103000743315
+2. odds and benchmark,0.7810973000014201
+3. feature engineering,1.3478830999229103
+4. split and scoring,0.10598770005162805
+5. hyperparameter tuning,134.23060969996732
+6. calibration and selection,30.680108900065534
+7. test evaluation and bootstrap,12.763030299916863
+8. permutation importance,17.205293900100514
+9. betting simulation and permutation tests,11.705798399983905
+10. reproducibility record,0.023421599995344877
+Total,211.49634120007977

@@ -3,7 +3,9 @@ pandas==3.0.5
 scikit-learn==1.9.1
 scipy==1.18.0
 xgboost==3.4.1
-matplotlib
-notebook
-nbconvert
+matplotlib==3.11.1
+nbconvert==7.17.2
+nbformat==5.11.1
+ipykernel==7.4.0
+jupyter
 kagglehub

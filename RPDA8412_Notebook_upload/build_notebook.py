@@ -1101,5 +1101,188 @@ pd.Series({"review section seconds": time.perf_counter() - _review_start}).to_fr
 rev_bet.T
 """)
 
+md("""
+# 13. Second-review checks (added after the second round of supervisor feedback, November 2026)
+
+These checks were added after the test results had been seen. Sections 1 to 12 are unchanged. The results are sensitivity analyses, not confirmatory tests.
+""")
+md("## 13.1 Identity of the database file")
+code("""
+import hashlib
+_review2_start = time.perf_counter()
+R2 = OUT / "review2"; R2.mkdir(exist_ok=True)
+_h = hashlib.sha256()
+with open(DB_PATH, "rb") as fh:
+    for chunk in iter(lambda: fh.read(1 << 20), b""):
+        _h.update(chunk)
+db_id = pd.Series({"file": "database.sqlite", "size in bytes": DB_PATH.stat().st_size, "sha256": _h.hexdigest()}, name="value").to_frame()
+db_id.to_csv(R2 / "database_identity.csv")
+db_id
+""")
+md("## 13.2 Odds and line-up coverage of all leagues in the database")
+code("""
+_all = pd.read_sql("SELECT * FROM Match", con).merge(leagues, on="league_id")
+_complete = sum(_all[[b + "H", b + "D", b + "A"]].notna().all(axis=1).astype(int) for b in BOOKS)
+_pl = [f"{s}_player_{k}" for s in ("home", "away") for k in range(1, 12)]
+league_cov = pd.DataFrame({"country": _all["country"], "league": _all["league"], "matches": 1, "at least 3 complete bookmakers": (_complete >= 3).astype(float),
+                           "all 22 players listed": _all[_pl].notna().all(axis=1).astype(float)}).groupby(["country", "league"]).agg(
+    {"matches": "sum", "at least 3 complete bookmakers": "mean", "all 22 players listed": "mean"}).reset_index().sort_values("matches", ascending=False)
+league_cov.to_csv(R2 / "league_coverage.csv", index=False)
+league_cov
+""")
+md("## 13.3 Tied FIFA rating rows: are the values different, and does a repeatable rule change the results?")
+code("""
+tie = pa.groupby(["player_api_id", "date"]).agg(rows=("overall_rating", "size"), ov_min=("overall_rating", "min"), ov_max=("overall_rating", "max"),
+                                                po_min=("potential", "min"), po_max=("potential", "max"))
+tie = tie[tie["rows"] > 1]
+# repeatable rule: tied rows for a player and date are averaged, which does not depend on row order
+pa_rule = pa.groupby(["player_api_id", "date"], as_index=False)[["overall_rating", "potential"]].mean().sort_values("date")
+rated_rule = pd.merge_asof(prev_lineups.sort_values("date"), pa_rule.rename(columns={"date": "rating_date"}), left_on="date", right_on="rating_date",
+                           by="player_api_id", direction="backward", allow_exact_matches=False)
+squad_rule = rated_rule.groupby(["id", "team"]).agg(squad_overall=("overall_rating", "mean"), squad_potential=("potential", "mean")).reset_index()
+F_rule = match[FEATURES].astype(float).reset_index(drop=True).copy()
+for side in ("home", "away"):
+    s_ = match[["id", f"{side}_team_api_id"]].merge(squad_rule, left_on=["id", f"{side}_team_api_id"], right_on=["id", "team"], how="left")
+    F_rule[f"{side}_squad_overall"] = s_["squad_overall"].to_numpy(); F_rule[f"{side}_squad_potential"] = s_["squad_potential"].to_numpy()
+F_rule["squad_overall_diff"] = F_rule["home_squad_overall"] - F_rule["away_squad_overall"]
+_d = (F_rule[SQUAD].to_numpy() - match[SQUAD].to_numpy().astype(float))
+_chg = np.nan_to_num(np.abs(_d)) > 1e-12
+_used = rated_rule.merge(tie.reset_index()[["player_api_id", "date"]].rename(columns={"date": "rating_date"}), on=["player_api_id", "rating_date"])
+m_rule = fit_cols(F_rule, FEATURES, tr); p_rule = m_rule.predict_proba(F_rule.loc[te, FEATURES]); ed_rule = p_rule - P_MKT[te]
+tie_info = {"rating rows after dropping missing overall": len(pa), "player-date pairs with more than one row": len(tie), "rows in those pairs": int(tie["rows"].sum()),
+            "pairs whose overall ratings differ": int((tie["ov_min"] != tie["ov_max"]).sum()), "pairs whose potential ratings differ": int((tie["po_min"] != tie["po_max"]).sum()),
+            "largest overall difference within a pair": float((tie["ov_max"] - tie["ov_min"]).max()), "largest potential difference within a pair": float((tie["po_max"] - tie["po_min"]).max()),
+            "line-up player rows that use a tied rating": len(_used), "matches with a changed squad feature": int(_chg.any(axis=1).sum()),
+            "test matches with a changed squad feature": int(_chg[te].any(axis=1).sum()), "largest change in a squad feature": float(np.nanmax(np.abs(_d))),
+            "selected configuration test RPS, original": rps(yt, P_SEL), "selected configuration test RPS, tied rows averaged": rps(yt, p_rule)}
+rows = []
+for settle, odds in (("average", odds_avg), ("best", odds_max)):
+    for t in (.03, .05, .07):
+        mask = ed_rule > t; r = roi(mask, odds); h = strat_null(mask, odds); f = fixed_bets_null(mask, odds)
+        rows.append({"settlement": settle, "threshold": int(t*100), "bets": int(mask.sum()), "ROI": r, "ROI original": roi(edge > t, odds),
+                     "bets also in original": int((mask & (edge > t)).sum()), "stratified p": (np.sum(h >= r) + 1) / (N_PERM + 1), "fixed-bets p": (np.sum(f >= r) + 1) / (N_PERM + 1)})
+tie_bet = pd.DataFrame(rows); tie_bet.to_csv(R2 / "tied_ratings_betting.csv", index=False)
+pd.Series(tie_info, name="value").to_frame().to_csv(R2 / "tied_ratings.csv")
+display(tie_bet)
+pd.Series(tie_info, name="value").to_frame()
+""")
+md("## 13.4 Whole dates kept on one side of every boundary: full rerun of tuning, calibration, selection, test and betting")
+code("""
+_dates = match["date"].to_numpy()
+_d_tv, _d_vt = match.loc[va, "date"].min(), match.loc[te, "date"].min()
+tr2 = (match["date"] < _d_tv).to_numpy(); va2 = ((match["date"] >= _d_tv) & (match["date"] < _d_vt)).to_numpy(); te2 = (match["date"] >= _d_vt).to_numpy()
+_dt = _dates[tr2]
+whole_folds = []
+_starts = [b[0] for _, b in TimeSeriesSplit(n_splits=5).split(np.arange(tr2.sum()))] + [len(_dt)]
+_edges = [_dt[s] if s < len(_dt) else None for s in _starts]
+for k in range(5):
+    fit_ = np.where(_dt < _edges[k])[0]
+    sc_ = np.where((_dt >= _edges[k]) & (_dt < _edges[k + 1]))[0] if _edges[k + 1] is not None else np.where(_dt >= _edges[k])[0]
+    whole_folds.append((fit_, sc_))
+fold2 = pd.DataFrame([{"fold": k + 1, "fit matches": len(a), "fit last": str(_dt[a].max())[:10], "scored matches": len(b), "scored first": str(_dt[b].min())[:10], "scored last": str(_dt[b].max())[:10],
+                       "dates on both sides": len(set(_dt[a]) & set(_dt[b]))} for k, (a, b) in enumerate(whole_folds)])
+fold2.to_csv(R2 / "whole_date_folds.csv", index=False)
+split2 = pd.DataFrame([{"partition": nm, "matches": int(m.sum()), "first": str(match.loc[m, "date"].min())[:10], "last": str(match.loc[m, "date"].max())[:10]} for nm, m in (("train", tr2), ("validation", va2), ("test", te2))])
+split2.to_csv(R2 / "whole_date_split.csv", index=False)
+display(split2); display(fold2)
+w2 = compute_sample_weight("balanced", y[tr2]); yt2 = y[te2]; pm2 = P_MKT[te2]
+rows, final2 = [], {}
+for name, (pipe, grid, needs_weight) in candidates.items():
+    gs = GridSearchCV(clone(pipe), grid, scoring=rps_scorer, cv=whole_folds, n_jobs=1)
+    kw = {"clf__sample_weight": w2} if needs_weight else {}
+    gs.fit(X[tr2], y[tr2], **kw)
+    vs = {"uncalibrated": gs.best_estimator_}
+    if name != "Logistic Regression":
+        for method in ("sigmoid", "isotonic"):
+            c_ = CalibratedClassifierCV(clone(gs.best_estimator_), method=method, cv=whole_folds, ensemble=True); c_.fit(X[tr2], y[tr2], **kw); vs[method] = c_
+    best = min(vs, key=lambda v: rps(y[va2], vs[v].predict_proba(X[va2])))
+    final2[name] = (best, vs[best]); pv, pt = vs[best].predict_proba(X[va2]), vs[best].predict_proba(X[te2])
+    rows.append({"model": name, "best params": str({k.replace("clf__", ""): w for k, w in gs.best_params_.items()}), "version": best, "CV RPS": -gs.best_score_, "validation RPS": rps(y[va2], pv),
+                 "test RPS": rps(yt2, pt), "test Log-Loss": log_loss(yt2, pt, labels=[0, 1, 2]), "test accuracy": accuracy_score(yt2, pt.argmax(1)),
+                 "original pipeline on the same test matches": rps(yt2, final[name][1].predict_proba(X[te2]))})
+rows.append({"model": "Market consensus", "test RPS": rps(yt2, pm2), "test Log-Loss": log_loss(yt2, pm2, labels=[0, 1, 2]), "test accuracy": accuracy_score(yt2, pm2.argmax(1)), "validation RPS": rps(y[va2], P_MKT[va2])})
+whole_tab = pd.DataFrame(rows); whole_tab.to_csv(R2 / "whole_date_models.csv", index=False)
+SEL2 = min(final2, key=lambda m: rps(y[va2], final2[m][1].predict_proba(X[va2])))
+whole_tab
+""")
+code("""
+T2 = match.loc[te2].reset_index(drop=True); P2 = final2[SEL2][1].predict_proba(X[te2]); edge2 = P2 - pm2
+oa2, ob2 = T2[["odds_avg_H", "odds_avg_D", "odds_avg_A"]].to_numpy(), T2[["odds_max_H", "odds_max_D", "odds_max_A"]].to_numpy(); won2 = np.eye(3)[yt2].astype(bool)
+_wk = T2["date"].dt.to_period("W").astype(str).to_numpy(); _wks = pd.unique(_wk); _wr = [np.where(_wk == w)[0] for w in _wks]
+_rg = np.random.default_rng(SEED + 1); BLOCK2 = [np.concatenate([_wr[j] for j in _rg.integers(0, len(_wks), len(_wks))]) for _ in range(B)]
+_diff = rps_each(yt2, P2) - rps_each(yt2, pm2); _lo, _hi, _v = ci(lambda ix: _diff[ix].mean(), BLOCK2)
+_pmn = pm2 / pm2.sum(1, keepdims=True)
+def roi2(mask, odds):
+    return (np.where(mask & won2, odds - 1, 0).sum() - (mask & ~won2).sum()) / mask.sum()
+def strat2(mask, odds):
+    rg = np.random.default_rng(SEED); fw, fo = won2.ravel(), odds.ravel(); ok = np.isfinite(fo); per = mask.sum(axis=0)
+    pools = [np.where(ok & (np.arange(fo.size) % 3 == k))[0] for k in range(3)]; out = np.empty(N_PERM)
+    for i in range(N_PERM):
+        pick = np.concatenate([rg.choice(pools[k], per[k], replace=False) for k in range(3) if per[k]]); out[i] = np.where(fw[pick], fo[pick] - 1, -1.0).mean()
+    return out
+def fixed2(mask, odds):
+    rg = np.random.default_rng(SEED + 3); cum = _pmn.cumsum(1); r_ = np.where(mask.any(1))[0]; m, o, c = mask[r_], np.where(mask[r_], odds[r_], 0.0), cum[r_]; st = mask.sum(); out = np.empty(N_PERM)
+    for i in range(N_PERM):
+        oc = np.minimum((rg.random(len(r_))[:, None] > c).sum(1), 2); w_ = np.zeros_like(m); w_[np.arange(len(r_)), oc] = True
+        out[i] = (np.where(m & w_, o - 1, 0).sum() - (m & ~w_).sum()) / st
+    return out
+rows = []
+for settle, odds in (("average", oa2), ("best", ob2)):
+    for t in (.03, .05, .07):
+        mask = edge2 > t; r = roi2(mask, odds); h = strat2(mask, odds); f = fixed2(mask, odds)
+        pnl = np.where(mask & won2, odds - 1, 0).sum(1) - (mask & ~won2).sum(1); st = mask.sum(1); v_ = np.array([pnl[ix].sum() / st[ix].sum() for ix in BLOCK2])
+        rows.append({"settlement": settle, "threshold": int(t*100), "bets": int(mask.sum()), "ROI": r, "ROI low": np.percentile(v_, 2.5), "ROI high": np.percentile(v_, 97.5),
+                     "stratified p": (np.sum(h >= r) + 1) / (N_PERM + 1), "fixed-bets p": (np.sum(f >= r) + 1) / (N_PERM + 1)})
+whole_bet = pd.DataFrame(rows); whole_bet.to_csv(R2 / "whole_date_betting.csv", index=False)
+pd.Series({"selected": f"{SEL2} ({final2[SEL2][0]})", "model minus market RPS": _diff.mean(), "low": _lo, "high": _hi, "resamples favouring model": int((_v < 0).sum()), "mean P(home) minus market": edge2[:, 0].mean()}, name="value").to_frame().to_csv(R2 / "whole_date_market.csv")
+display(pd.read_csv(R2 / "whole_date_market.csv"))
+whole_bet
+""")
+md("## 13.5 How reliable was the model on the bets it selected?")
+code("""
+rows = []
+for settle, odds in (("average", odds_avg), ("best", odds_max)):
+    for t in (.03, .05, .07):
+        full = edge > t
+        for lab, keep in [("All", np.ones(3, bool))] + [(LAB[k], np.eye(3, dtype=bool)[k]) for k in range(3)]:
+            mask = full & keep; n = mask.sum(1); nw = (mask & won).sum(1); sm = (P_SEL * mask).sum(1); sk = (P_MKT[te] * mask).sum(1)
+            lo1, hi1, _ = ci(lambda ix: (sm[ix].sum() - nw[ix].sum()) / n[ix].sum() * 100, BLOCK)
+            lo2, hi2, _ = ci(lambda ix: (sk[ix].sum() - nw[ix].sum()) / n[ix].sum() * 100, BLOCK)
+            rows.append({"settlement": settle, "threshold": int(t*100), "outcome": lab, "bets": int(mask.sum()), "mean model probability": P_SEL[mask].mean(), "mean market probability": P_MKT[te][mask].mean(),
+                         "actual win rate": won[mask].mean(), "mean odds": odds[mask].mean(), "model expected ROI": (P_SEL[mask] * odds[mask]).mean() - 1, "market expected ROI": (P_MKT[te][mask] * odds[mask]).mean() - 1,
+                         "realised ROI": roi(mask, odds), "model minus actual, points": (P_SEL[mask].mean() - won[mask].mean()) * 100, "model low": lo1, "model high": hi1,
+                         "market minus actual, points": (P_MKT[te][mask].mean() - won[mask].mean()) * 100, "market low": lo2, "market high": hi2})
+sel_rel = pd.DataFrame(rows); sel_rel.to_csv(R2 / "selected_bet_reliability.csv", index=False)
+sel_rel
+""")
+md("## 13.6 Do the same bets survive a change in the information cutoff?")
+code("""
+rows = []
+for nm, pc in CUT_PROBS.items():
+    if nm == "Original features":
+        continue
+    ed_c = pc - P_MKT[te]
+    for t in (.03, .05, .07):
+        a, b = edge > t, ed_c > t
+        rows.append({"version": nm, "threshold": int(t*100), "original bets": int(a.sum()), "version bets": int(b.sum()), "bets in both": int((a & b).sum()), "share of original bets kept": (a & b).sum() / a.sum(),
+                     "correlation of edges": np.corrcoef(edge.ravel(), ed_c.ravel())[0, 1], "test RPS": rps(yt, pc)})
+cut_stab = pd.DataFrame(rows); cut_stab.to_csv(R2 / "cutoff_bet_stability.csv", index=False)
+cut_stab
+""")
+md("## 13.7 Separating calibration from ensembling and training history")
+code("""
+rows = []
+for name in ("Random Forest", "XGBoost"):
+    cal_ = final[name][1]; pairs_ = cal_.calibrated_classifiers_
+    single = tuned[name]
+    for lab_, mask_, y_ in (("validation", va, y[va]), ("test", te, y[te])):
+        Xm = X[mask_]
+        ens = np.mean([c_.estimator.predict_proba(Xm) for c_ in pairs_], axis=0)
+        rows.append({"model": name, "set": lab_, "single uncalibrated pipeline, all training matches": rps(y_, single.predict_proba(Xm)), "average of the five fold pipelines, uncalibrated": rps(y_, ens), "average of the five fold pipelines, calibrated": rps(y_, cal_.predict_proba(Xm))})
+cal_parts = pd.DataFrame(rows); cal_parts.to_csv(R2 / "calibration_decomposition.csv", index=False)
+pd.Series({"second-review section seconds": time.perf_counter() - _review2_start}).to_frame("value").to_csv(R2 / "review2_runtime.csv")
+cal_parts
+""")
+
 nb = nbf.v4.new_notebook(cells=cells, metadata={"kernelspec": {"name": "python3", "display_name": "Python 3"}})
 nbf.write(nb, "RPDA8412_Market_Efficiency.ipynb")
